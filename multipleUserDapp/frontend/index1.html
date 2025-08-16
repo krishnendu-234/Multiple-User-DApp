@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Hash Verification System - USER1</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3498db;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .wallet-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .info-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            font-size: 0.9em;
+            position: relative;
+            word-break: break-all;
+        }
+
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .btn-success { background: linear-gradient(135deg, #27ae60, #229954); }
+        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .btn-info { background: linear-gradient(135deg, #17a2b8, #138496); }
+
+        .output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            border: 2px solid #34495e;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .verification-result {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .verification-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .verification-failure {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .hash-comparison {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .hash-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+
+        .hash-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .hash-value {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            word-break: break-all;
+            color: #34495e;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .match-status {
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 600;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .transaction-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .transaction-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .user-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .user-item.current-user {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .advanced-section {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .message-display {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            min-height: 100px;
+        }
+
+        .message-content {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+        }
+
+        .message-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .meta-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .meta-value {
+            font-family: 'Courier New', monospace;
+            background: #e9ecef;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #5a6268;
+        }
+
+        .refresh-balance-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            margin-left: 10px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+
+        .balance-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .history-content {
+            font-size: 0.85em;
+        }
+
+        .history-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+
+        .notification-success { background: #28a745; }
+        .notification-error { background: #dc3545; }
+        .notification-warning { background: #ffc107; color: #212529; }
+        .notification-info { background: #17a2b8; }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .wallet-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .message-meta {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                margin: 5px 0;
+            }
+
+            .balance-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .refresh-balance-btn {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Universal Hash Verification System</h1>
+            <p>Blockchain-based message verification with custom hashing - USER1 Interface</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Wallet Connection Section -->
+            <div class="section">
+                <h2>🔗 Wallet Connection</h2>
+                <div class="wallet-info">
+                    <div class="info-item">
+                        <span class="info-label">Wallet Address</span>
+                        <span class="info-value" id="walletAddress">Not connected</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Connection Status</span>
+                        <span class="status disconnected" id="connectionStatus">Disconnected</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Network</span>
+                        <span class="info-value" id="networkName">Unknown</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Chain ID</span>
+                        <span class="info-value" id="chainId">N/A</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Balance</span>
+                        <div class="balance-container">
+                            <span class="info-value" id="walletBalance">0.0000 TXDC</span>
+                            <button class="btn refresh-balance-btn" id="refreshBalanceBtn" onclick="refreshBalance()" disabled>🔄 Refresh</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" id="connectWalletBtn" onclick="connectWallet()">Connect Wallet</button>
+                    <button class="btn btn-danger" onclick="disconnectWallet()">Disconnect</button>
+                    <button class="btn btn-warning" onclick="recoverConnection()">Recover Connection</button>
+                    <button class="btn btn-info" onclick="performNetworkDiagnostics()">Network Diagnostics</button>
+                </div>
+            </div>
+
+            <!-- Message Operations Section -->
+            <div class="section">
+                <h2>📝 Message Operations</h2>
+                <div class="input-group">
+                    <label for="messageInput">Enter Message to Send:</label>
+                    <textarea id="messageInput" placeholder="Type your message here..." rows="3"></textarea>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-success" id="sendMessageBtn" onclick="sendHashedMessage()" disabled>Send Message</button>
+                    <button class="btn btn-info" id="getMessageBtn" onclick="getMessage()" disabled>Get Stored Message</button>
+                    <button class="btn btn-warning" onclick="refreshSenderInfo()" disabled id="refreshSenderBtn">Refresh Sender Info</button>
+                    <button class="btn btn-info" onclick="forceEventRefresh()" disabled id="forceRefreshBtn">Force Event Refresh</button>
+                </div>
+
+                <!-- Message Display Area -->
+                <div class="message-display" id="messageDisplay" style="display: none;">
+                    <h4>📨 Stored Message Details</h4>
+                    <div class="message-content" id="currentMessage">No message stored</div>
+                    <div class="message-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Contract Address</span>
+                            <span class="meta-value" id="contractAddressDisplay">Not available</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Sender Information</span>
+                            <span class="meta-value" id="senderAddressDisplay">Not available</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hash Verification Section -->
+            <div class="section">
+                <h2>🔍 Hash Verification</h2>
+                <div class="input-group">
+                    <label for="verifyInput">Enter Message to Verify:</label>
+                    <textarea id="verifyInput" placeholder="Enter message to verify against stored message..." rows="3"></textarea>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-warning" id="verifyHashBtn" onclick="verifyHash()" disabled>Verify Hash</button>
+                </div>
+
+                <div id="verificationResult" class="verification-result" style="display: none;">
+                    Verification result will appear here
+                </div>
+
+                <div id="hashComparison" class="hash-comparison" style="display: none;">
+                    <div class="hash-item">
+                        <div class="hash-label">Stored Message Hash:</div>
+                        <div class="hash-value" id="storedHashDisplay"></div>
+                    </div>
+                    <div class="hash-item">
+                        <div class="hash-label">Input Message Hash:</div>
+                        <div class="hash-value" id="generatedHashDisplay"></div>
+                    </div>
+                    <div class="match-status" id="matchStatus">Comparison result</div>
+                </div>
+            </div>
+
+            <!-- Hash Generation Section -->
+            <div class="section">
+                <h2>🔐 Hash Generation</h2>
+                <div class="input-group">
+                    <label for="hashInput">Enter Message to Hash:</label>
+                    <textarea id="hashInput" placeholder="Enter any message to generate its hash..." rows="3"></textarea>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-info" id="generateHashBtn" onclick="generateHashOnly()" disabled>Generate Hash</button>
+                    <button class="btn btn-warning" onclick="updateHashHistoryDisplay()">Show History</button>
+                    <button class="btn btn-success" onclick="exportHashHistory()">Export History</button>
+                    <button class="btn btn-danger" onclick="clearHashHistory()">Clear History</button>
+                </div>
+                <div id="hashHistoryDisplay" class="transaction-history" style="margin-top: 15px;">
+                    <div class="history-item">No hash history available</div>
+                </div>
+            </div>
+
+            <!-- Transaction History Section -->
+            <div class="section">
+                <h2>📊 Transaction History</h2>
+                <div class="transaction-history" id="transactionHistory">
+                    <div class="transaction-item">No transactions yet</div>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-info" onclick="updateTransactionHistory()">Refresh History</button>
+                </div>
+            </div>
+
+            <!-- Connected Users Section -->
+            <div class="section">
+                <h2>👥 Connected Users</h2>
+                <div class="user-list" id="userList">
+                    <div class="user-item">No users connected</div>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-info" onclick="updateConnectedUsers()">Refresh Users</button>
+                </div>
+            </div>
+
+            <!-- Advanced Features Section -->
+            <div class="section advanced-section">
+                <h2>⚙️ Advanced Features</h2>
+                <div class="button-group">
+                    <button class="btn btn-info" onclick="toggleAdvancedMode()" id="toggleAdvancedBtn">Show Advanced Features</button>
+                </div>
+                
+                <div id="advancedPanel" style="display: none; margin-top: 20px;">
+                    <h3>🔧 Advanced Operations</h3>
+                    <div class="button-group">
+                        <button class="btn btn-warning" onclick="validateHashIntegrity()">Validate Hash Integrity</button>
+                        <button class="btn btn-info" onclick="performHashBenchmark()">Hash Benchmark</button>
+                        <button class="btn btn-success" onclick="checkNetworkStatus()">Check Network Status</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Console Section -->
+            <div class="section" style="grid-column: 1 / -1;">
+                <h2>📟 System Console</h2>
+                <div id="output" class="output"></div>
+                <div class="button-group">
+                    <button class="btn btn-danger" id="clearOutputBtn" onclick="clearOutput()">Clear Console</button>
+                    <button class="btn btn-info" onclick="print('Console test at ' + new Date().toLocaleTimeString())">Test Console</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Ctrl+Enter to send message
+            if (event.ctrlKey && event.key === 'Enter') {
+                const messageInput = document.getElementById('messageInput');
+                if (document.activeElement === messageInput && messageInput.value.trim()) {
+                    sendHashedMessage();
+                }
+            }
+            
+            // Ctrl+R to refresh balance (prevent page refresh)
+            if (event.ctrlKey && event.key === 'r') {
+                event.preventDefault();
+                if (window.currentAccount) {
+                    refreshBalance();
+                }
+            }
+            
+            // Ctrl+S to refresh sender info
+            if (event.ctrlKey && event.key === 's') {
+                event.preventDefault();
+                if (window.currentAccount) {
+                    refreshSenderInfo();
+                }
+            }
+        });
+
+        // Auto-resize textareas
+        document.addEventListener('DOMContentLoaded', function() {
+            const textareas = document.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+            });
+        });
+    </script>
+    <script src="interact_user1.js"></script>
+</body>
+</html>
